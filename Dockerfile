@@ -1,5 +1,9 @@
 FROM php:8.2-apache
 
+# PostgreSQLのクライアントライブラリをインストール
+RUN apt-get update && apt-get install -y libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 # PostgreSQL PDO extensionを有効化
 RUN docker-php-ext-install pdo_pgsql
 
