@@ -10,7 +10,14 @@ if (file_exists(__DIR__ . '/.env')) {
 
 // データベース接続
 try {
-    $db_connection_string = getenv('DB_CONNECTION_STRING');
+    // DB_CONNECTION_STRINGの代わりに、個別の環境変数を使用
+    $db_host = getenv('SUPABASE_DB_HOST');
+    $db_name = getenv('SUPABASE_DB_NAME');
+    $db_user = getenv('SUPABASE_DB_USER');
+    $db_password = getenv('SUPABASE_DB_PASSWORD');
+
+    $db_connection_string = "pgsql:host=$db_host;dbname=$db_name;user=$db_user;password=$db_password";
+    
     $pdo = new PDO($db_connection_string);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
@@ -52,6 +59,7 @@ $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
 </head>
 <body>
     <div class="container">
+        <h1>phpbbs</h1>
         <div class="chat-form">
             <form action="index.php" method="post" id="chatForm">
                 <input type="text" name="username" id="usernameInput" placeholder="ユーザー名" required value="<?= htmlspecialchars($_COOKIE['username'] ?? '') ?>">
