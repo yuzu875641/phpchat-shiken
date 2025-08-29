@@ -1,10 +1,12 @@
 # PHPとApacheをベースイメージとして使用
 FROM php:8.2-apache
 
-# PostgreSQLのクライアントライブラリと開発ヘッダをインストール
-# これらは pdo_pgsql をビルドするために必要
+# 必要な開発ライブラリをインストール
+# libpq-dev: pdo_pgsql をビルドするために必要
+# libonig-dev: mbstring をビルドするために必要
 RUN apt-get update && apt-get install -y \
     libpq-dev \
+    libonig-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # 必要なPHP拡張機能をインストール
