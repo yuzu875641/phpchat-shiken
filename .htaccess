@@ -1,0 +1,14 @@
+<IfModule mod_rewrite.c>
+    # RewriteEngineをオンにする
+    RewriteEngine On
+
+    # リクエストされたファイルやディレクトリが実在するかをチェック
+    # 存在する場合は、何もせずにそのまま処理する
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+
+    # 上記の条件に合致しない場合、全てのリクエストをapi.phpに内部的に転送
+    # [QSA]: 元のクエリ文字列を転送先に引き継ぐ
+    # [L]: ルールにマッチしたら、他のRewriteRuleの処理を停止する
+    RewriteRule ^(.*)$ api.php [QSA,L]
+</IfModule>
