@@ -2,71 +2,115 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>phpBBS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PHP BBS</title>
     <style>
-        .id-speaker { color: #0000FF; }
-        .id-moderator { color: #FFA500; }
-        .id-summit, .id-admin { color: #008B8B; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        input, button {
+            padding: 8px;
+            margin-right: 5px;
+        }
+        #messages-container {
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+        .message {
+            border-bottom: 1px solid #eee;
+            padding: 10px 0;
+        }
     </style>
 </head>
 <body>
 
-    <h1>phpBBS</h1>
-    <div id="messages"></div>
+    <h2>PHP BBS</h2>
 
-    <form id="postForm">
-        <input type="text" id="username" placeholder="ユーザー名" required>
-        <input type="password" id="password" placeholder="パスワード" required>
-        <textarea id="content" placeholder="メッセージ" required></textarea>
+    <form id="post-form">
+        <input type="text" id="user-id" placeholder="User ID" required>
+        <input type="text" id="content" placeholder="Content" required>
         <button type="submit">投稿</button>
     </form>
 
+    <div id="messages-container">
+        <h3>投稿メッセージ</h3>
+    </div>
+
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            fetchMessages();
-        });
+        // メッセージ投稿処理
+        document.getElementById('post-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
 
-        async function fetchMessages() {
-            const response = await fetch('/api/messages');
-            const messages = await response.json();
-            const messagesDiv = document.getElementById('messages');
-            messagesDiv.innerHTML = '';
-
-            messages.forEach(msg => {
-                const p = document.createElement('p');
-                const idSpan = document.createElement('span');
-                idSpan.textContent = `@(${msg.user_id})`;
-                idSpan.classList.add(`id-${msg.role}`);
-                
-                p.appendChild(idSpan);
-                p.innerHTML += ` ${msg.username} ${msg.content}`;
-                messagesDiv.appendChild(p);
-            });
-        }
-
-        document.getElementById('postForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
+            const userId = document.getElementById('user-id').value;
             const content = document.getElementById('content').value;
 
-            const response = await fetch('/api/messages', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ username, password, content })
-            });
+            if (!userId || !content) {
+                alert('ユーザーIDとコンテンツを入力してください。');
+                return;
+            }
 
-            if (response.ok) {
-                alert('投稿成功！');
-                document.getElementById('content').value = '';
-                fetchMessages(); // 再読み込み
-            } else {
-                const error = await response.json();
-                alert('投稿失敗: ' + error.error);
+            const postData = {
+                user_id: userId,
+                content: content
+            };
+
+            try {
+                const response = await fetch('/api.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(postData)
+                });
+
+                if (response.ok) {
+                    alert('投稿が完了しました！');
+                    document.getElementById('post-form').reset();
+                    fetchMessages(); // メッセージを再取得して表示を更新
+                } else {
+                    const error = await response.json();
+                    alert('投稿失敗: ' + error.error);
+                }
+            } catch (e) {
+                alert('投稿中にエラーが発生しました。');
             }
         });
+
+        // 投稿されたメッセージを取得して表示
+        async function fetchMessages() {
+            try {
+                // messagesテーブルからデータを取得
+                const response = await fetch('/api.php?action=get_messages');
+                
+                if (!response.ok) {
+                    throw new Error('メッセージの取得に失敗しました。');
+                }
+
+                const messages = await response.json();
+                const container = document.getElementById('messages-container');
+                container.innerHTML = '<h3>投稿メッセージ</h3>'; // コンテンツをリセット
+
+                // 各メッセージをHTMLに変換して追加
+                messages.forEach(message => {
+                    const messageDiv = document.createElement('div');
+                    messageDiv.className = 'message';
+                    messageDiv.innerHTML = `<strong>${message.user_id}</strong>: ${message.content}`;
+                    container.appendChild(messageDiv);
+                });
+
+            } catch (e) {
+                console.error('Failed to fetch messages:', e);
+                alert('メッセージの表示中にエラーが発生しました。');
+            }
+        }
+
+        // ページ読み込み時にメッセージを取得
+        window.onload = fetchMessages;
     </script>
+
 </body>
 </html>
