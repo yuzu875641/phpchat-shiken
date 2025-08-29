@@ -1,17 +1,44 @@
 <?php
 
-// クロスオリジンリソース共有（CORS）を許可するヘッダー
-// これにより、異なるドメインからのリクエストも受け入れ可能になる
+// Allow cross-origin requests
 header('Access-Control-Allow-Origin: *');
-// レスポンスの形式をJSONに設定
+// Set the content type to JSON
 header('Content-Type: application/json');
 
-// HTTPリクエストのメソッドが 'POST' かどうかをチェック
+// Handle GET requests for fetching messages
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'get_messages') {
+    try {
+        require_once('db.php');
+
+        // Select the last 50 messages, ordered from newest to oldest
+        $sql = "SELECT user_id, content FROM messages ORDER BY created_at DESC LIMIT 50";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute();
+
+        $messages = $stmt->fetchAll();
+
+        // Send a 200 OK response with the messages as JSON
+        http_response_code(200);
+        echo json_encode($messages);
+        exit; // Terminate the script after sending the response
+
+    } catch (PDOException $e) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
+        exit;
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => 'An unexpected error occurred.']);
+        exit;
+    }
+}
+
+// Handle POST requests for posting a new message
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // リクエストボディからJSONデータを取得
+    // Decode the JSON data from the request body
     $data = json_decode(file_get_contents('php://input'), true);
 
-    // ユーザーIDとコンテンツがリクエストに含まれているか検証
+    // Validate that both user_id and content are present
     if (!isset($data['user_id']) || !isset($data['content'])) {
         http_response_code(400); // Bad Request
         echo json_encode(['error' => 'User ID and content are required.']);
@@ -22,41 +49,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $content = $data['content'];
 
     try {
-        // データベース接続ファイルを読み込む
         require_once('db.php');
 
-        // メッセージを挿入するためのプリペアドステートメントを準備
+        // Prepare a statement for a secure insertion
         $sql = "INSERT INTO messages (user_id, content) VALUES (:user_id, :content)";
         $stmt = $pdo->prepare($sql);
 
-        // SQLインジェクションを防ぐためにパラメータを安全にバインド
+        // Bind the parameters to prevent SQL injection
         $stmt->bindValue(':user_id', $user_id);
         $stmt->bindValue(':content', $content);
 
-        // SQLステートメントを実行
+        // Execute the statement
         $stmt->execute();
 
-        // 成功した場合は、201 Created ステータスコードを返す
+        // On success, send a 201 Created response
         http_response_code(201);
-        // レスポンスボディは空のままでも良いが、今回は成功メッセージを返す
         echo json_encode(['status' => 'success']);
 
     } catch (PDOException $e) {
-        // データベース関連のエラーが発生した場合
         http_response_code(500); // Internal Server Error
-        error_log("Database Error: " . $e->getMessage()); // エラーログに記録
+        error_log("Database Error: " . $e->getMessage());
         echo json_encode(['error' => 'Database operation failed.']);
     } catch (Exception $e) {
-        // その他の予期せぬエラーが発生した場合
         http_response_code(500); // Internal Server Error
-        error_log("General Error: " . $e->getMessage()); // エラーログに記録
+        error_log("General Error: " . $e->getMessage());
         echo json_encode(['error' => 'An unexpected error occurred.']);
     }
 
 } else {
-    // POST以外のメソッドが使われた場合、405 Method Not Allowed を返す
+    // For any other request method, return a 405 error
     http_response_code(405);
     echo json_encode(['error' => 'Method not allowed.']);
 }
-
-?>
