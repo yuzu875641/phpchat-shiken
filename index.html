@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>phpBBS</title>
+    <style>
+        .id-speaker { color: #0000FF; }
+        .id-moderator { color: #FFA500; }
+        .id-summit, .id-admin { color: #008B8B; }
+    </style>
+</head>
+<body>
+
+    <h1>phpBBS</h1>
+    <div id="messages"></div>
+
+    <form id="postForm">
+        <input type="text" id="username" placeholder="ユーザー名" required>
+        <input type="password" id="password" placeholder="パスワード" required>
+        <textarea id="content" placeholder="メッセージ" required></textarea>
+        <button type="submit">投稿</button>
+    </form>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchMessages();
+        });
+
+        async function fetchMessages() {
+            const response = await fetch('/api/messages');
+            const messages = await response.json();
+            const messagesDiv = document.getElementById('messages');
+            messagesDiv.innerHTML = '';
+
+            messages.forEach(msg => {
+                const p = document.createElement('p');
+                const idSpan = document.createElement('span');
+                idSpan.textContent = `@(${msg.user_id})`;
+                idSpan.classList.add(`id-${msg.role}`);
+                
+                p.appendChild(idSpan);
+                p.innerHTML += ` ${msg.username} ${msg.content}`;
+                messagesDiv.appendChild(p);
+            });
+        }
+
+        document.getElementById('postForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const content = document.getElementById('content').value;
+
+            const response = await fetch('/api/messages', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username, password, content })
+            });
+
+            if (response.ok) {
+                alert('投稿成功！');
+                document.getElementById('content').value = '';
+                fetchMessages(); // 再読み込み
+            } else {
+                const error = await response.json();
+                alert('投稿失敗: ' + error.error);
+            }
+        });
+    </script>
+</body>
+</html>
